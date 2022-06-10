@@ -1,4 +1,4 @@
-﻿Plasticiser,Size,Water,Water Condition,Temperature (deg C),Time (days),Mean plasticiser WtPercent,Std plasticiser WtPercent
+Plasticiser,Size,Water,Water Condition,Temperature (deg C),Time (days),Mean plasticiser WtPercent,Std plasticiser WtPercent
 BPA,<200um,Marine,Agitated,25.5,0,16.68315946,0.104147168
 BPA,<200um,Marine,Agitated,25.5,0.083,10.22284558,0.238557316
 BPA,<200um,Marine,Agitated,25.5,1,10.45873733,0.798205657
@@ -19,6 +19,11 @@ BPA,<200um,Marine,Still,60,0,16.68315946,0.104147168
 BPA,<200um,Marine,Still,60,0.083,9.056785434,0.838814732
 BPA,<200um,Marine,Still,60,1,8.857622824,0.331305462
 BPA,<200um,Marine,Still,60,7,8.314695366,0.53383635
+BPA,400um-1mm,Marine,Still,25.5,0,13.61347563,0.583847191
+BPA,400um-1mm,Marine,Still,25.5,1,12.28485748,1.139496699
+BPA,400um-1mm,Marine,Still,25.5,7,10.74166455,0.306171357
+BPA,400um-1mm,Marine,Still,25.5,14,10.32056253,1.049668243
+BPA,400um-1mm,Marine,Still,25.5,21,10.36359232,0.601530607
 BPA,<200um,Marine,Still,60,21,8.987046644,0.607164926
 BPA,1-2mm,Marine,Still,5,0,15.34660403,0.11955995
 BPA,1-2mm,Marine,Still,5,1,15.50327971,1.116497094
@@ -127,6 +132,11 @@ DEHT,<200um,Marine,Still,60,0.083,13.14227914,0.068396279
 DEHT,<200um,Marine,Still,60,1,13.04675782,0.157646024
 DEHT,<200um,Marine,Still,60,7,13.21287563,0.478717122
 DEHT,<200um,Marine,Still,60,21,12.9691449,0.256185183
+DEHT,400um-1mm,Marine,Still,25.5,0,12.86707076,1.467354481
+DEHT,400um-1mm,Marine,Still,25.5,1,12.73482017,0.715928025
+DEHT,400um-1mm,Marine,Still,25.5,7,13.26571855,0.980053926
+DEHT,400um-1mm,Marine,Still,25.5,14,12.47446839,0.170324428
+DEHT,400um-1mm,Marine,Still,25.5,21,12.73354834,0.891881911
 DEHT,1-2mm,Marine,Still,5,0,14.23870609,0.361644129
 DEHT,1-2mm,Marine,Still,5,0.083,13.55185477,0.203060124
 DEHT,1-2mm,Marine,Still,5,1,14.63229915,0.594460361

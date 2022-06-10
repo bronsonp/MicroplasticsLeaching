@@ -1,4 +1,4 @@
-function mdl = make_diffusion_model(N, r0, associated_plasticiser, surface_plasticiser, D_plastic, delta)
+function mdl = make_diffusion_model(N, r0, associated_plasticiser, D_plastic, delta)
 % Initialise a diffusion model with the given parameters. The return value
 % is a structure that contains precomputed matrices that can be used to
 % quickly solve the diffusion equation. Pass this structure to `run_model`
@@ -6,7 +6,6 @@ function mdl = make_diffusion_model(N, r0, associated_plasticiser, surface_plast
 
     mdl = struct();
     mdl.associated_plasticiser = associated_plasticiser;
-    mdl.surface_plasticiser = surface_plasticiser;
     mdl.N = N;
 
     % prepare the matrix

@@ -24,7 +24,4 @@ function [avg_p, p] = run_model(mdl, p0, t)
 
     % Now integrate to get average concentration
     avg_p = 3 / mdl.r(end)^3 * trapz(mdl.r, reshape(mdl.r, [], 1).^2 .* (p + mdl.associated_plasticiser), 1);
-
-    % Add in the surface plasticiser
-    avg_p(t == 0) = avg_p(t == 0) + mdl.surface_plasticiser;
 end
