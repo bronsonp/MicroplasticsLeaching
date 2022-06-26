@@ -141,14 +141,16 @@ for p = ["BPA", "BPS", "DEHT", "DEHP"]
             
             if wc == "Still"
                 mfc = "none";
+                wc_desc = "Static";
             else
                 mfc = colours{line_id};
+                wc_desc = "Agitated";
             end
             lg(end+1) = errorbar(time, wtpc, wtpc_std, markers{line_id}, ...
                 'Color', colours{line_id}, ...
                 'MarkerEdgeColor', colours{line_id}, ...
                 'MarkerFaceColor', mfc, ...
-                'DisplayName', sprintf('%s', wc));
+                'DisplayName', wc_desc);
             hold on;
         
             % plot the model

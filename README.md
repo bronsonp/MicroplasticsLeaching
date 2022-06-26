@@ -1,6 +1,5 @@
 # Microplastics leaching analysis
 
-This is a diffusion model and curve fitting code for the analysis of leaching of plasticisers from microplastics. 
+This is the Matlab code used in the paper "Understanding plasticiser leaching from polystyrene microplastics" by Alexandra M. Gulizia, Kishan Patel, Bronson Philippa, Cherie A. Motti, Lynne van Herwerden, and George Vamvounis (2022).
 
-This is the code used in the paper "Leaching behaviours of plasticisers from polystyrene microplastics" by 
-Alexandra M. Gulizia, Kishan Patel, Bronson Philippa, Cherie A. Motti, and George Vamvounis, which is currently under review.
+The script `curve_fitting.m` fits the model to the experimental data. The script `make_plots.m` generates the figures used in the manuscript.
