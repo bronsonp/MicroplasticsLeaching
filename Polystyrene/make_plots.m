@@ -2,6 +2,8 @@
 % `curve_fitting` script to produce the results, then run this script to
 % produce the figures.
 
+[~,~,~]=mkdir("Figures");
+
 %% Load data 
 load("Results\data.mat");
 fits = struct();
@@ -116,7 +118,7 @@ for child = tiles.Children'
         annotations(end+1) = annotation("line", left + line_sep + [0 line_len*sind(rot)], bottom + [0 line_len*cosd(rot)]);
     end
 end
-
+exportgraphics(gcf(), fullfile("Figures", "Fig2.tiff"), "Resolution", 600);
 
 %% Figure showing varying agitation
 
@@ -200,6 +202,7 @@ for child = tiles.Children'
         annotations(end+1) = annotation("line", left + line_sep + [0 line_len*sind(rot)], bottom + [0 line_len*cosd(rot)]);
     end
 end
+exportgraphics(gcf(), fullfile("Figures", "Fig3.tiff"), "Resolution", 600);
 
 %% Evaluate the spatial behaviour of each plasticiser
 
@@ -226,7 +229,7 @@ for p = ["BPA", "BPS", "DEHT", "DEHP"]
     mask = y > 1e-4;
     time = time(mask);
     y = y(mask);
-    t_leach = interp1(y, time, 0.01)
+    t_leach = interp1(y, time, 0.01);
     times = t_leach .* [0 0.01 0.05 0.1:0.1:1];
 
     [~, ~, ~, ~, free_plasticiser, r] = predict(fits.(p), this_data, times);
@@ -250,7 +253,7 @@ xlabel(tiles, 'Radial position (μm)');
 ylabel(tiles, 'Relative concentration of plasticiser, p / p_0');
 l = legend(nexttile(2), lg);
 l.Location = "northeastoutside";
-
+exportgraphics(gcf(), fullfile("Figures", "Fig5.tiff"), "Resolution", 600);
 
 %% Figure showing varying sizes
 
@@ -260,12 +263,13 @@ wc = "Still";
 plot_data = data(data.Temperature == temp & data.WaterCondition == wc, :);
 subplot_id = 1;
 tiles=tiledlayout(2,1,'TileSpacing', 'compact');
+all_ax = {};
 for p = ["BPA", "DEHT"]
     nexttile();
     line_id = 1;
     lg = [];
     
-    for sz = unique(plot_data.Size)'
+    for sz = fliplr(unique(plot_data.Size)')
         this_data = plot_data(plot_data.Plasticiser == p & plot_data.Size == sz, :);
         if ~isempty(this_data)
             % plot the data
@@ -298,6 +302,7 @@ for p = ["BPA", "DEHT"]
     ax.TickLength = [0.02 0.05];
 %     ax.TickDir = 'out';
     title("(" + char('a'-1+subplot_id) + ") " + p);
+    all_ax{subplot_id} = ax;
 
     subplot_id = subplot_id + 1;
 end
@@ -306,7 +311,9 @@ xlabel(tiles, 'Leaching time (days)');
 ylabel(tiles, 'Plasticiser conc. (wt%)');
 l = legend(nexttile(1), lg);
 l.Location = "northeastoutside";
+l.String = {sprintf('Large\n(mean = 1.4 mm)'), sprintf('Medium\n(mean = 593 um)'), sprintf('Small\n(mean = 136 um)') };
 
+exportgraphics(gcf(), fullfile("Figures", "Fig4.tiff"), "Resolution", 600);
 
 %% What boundary layer thickness would limit in still water?
 

@@ -30,9 +30,7 @@ data = data(sort_key, :);
 data.MeanPlasticiserConc = data.MeanPlasticiserWtPercent/100 ./ (1 - data.MeanPlasticiserWtPercent/100);
 
 % specify representative radii for each size (in um)
-data.Properties.UserData.min_radius = [77 400 1000] / 2; % convert diameter to radius
-data.Properties.UserData.max_radius = [200 1000 2000] / 2; % convert diameter to radius
-data.Properties.UserData.radius = mean([data.Properties.UserData.min_radius; data.Properties.UserData.max_radius], 1);
+data.Properties.UserData.radius = [136 593 1447] / 2; % convert diameter to radius, using mean values from image analysis
 
 % read the results of the rinsing experiment
 rinsing_data = readtable('data/Rinse experiment.csv');
@@ -149,10 +147,10 @@ for plasticiser = ["BPA", "BPS", "DEHT", "DEHP"]
 
     options = optimoptions('particleswarm', 'Display', 'iter', 'SwarmSize', 100, 'UseParallel', true, 'FunctionTolerance', 1e-2);
     lb = [1 1 1];
-    ub = [5e3 1e4 1e2];
+    ub = [1e3 1e4 1e2];
     params1 = particleswarm(@(p)evaluate_model(fit_data, plasticiser, p(1), 0, p(2), p(3)), numel(lb), lb, ub, options);
-%     [~,model_output] = evaluate_model(fit_data, plasticiser, params1(1), 0, params1(2), params1(3));
-%     make_plot(model_output);
+    [~,model_output] = evaluate_model(fit_data, plasticiser, params1(1), 0, params1(2), params1(3));
+    make_plot(model_output);
 
     %% Curve fitting (impact of temp)
 
@@ -160,13 +158,13 @@ for plasticiser = ["BPA", "BPS", "DEHT", "DEHP"]
 
     options = optimoptions('particleswarm', 'Display', 'iter', 'SwarmSize', 100, 'UseParallel', true, 'FunctionTolerance', 1e-2);
     lb = [1 1 ];
-    ub = [50e3 1e5];
+    ub = [50e3 1e4];
     betas = [params1(2) params1(3)];
 
     params2 = particleswarm(@(p)evaluate_model(fit_data, plasticiser, p(1), p(2), betas(1), betas(2)), 2, lb, ub, options);
 
-%     [~,model_output] = evaluate_model(fit_data, plasticiser, params2(1), params2(2), betas(1), betas(2));
-%     make_plot(model_output);
+    [~,model_output] = evaluate_model(fit_data, plasticiser, params2(1), params2(2), betas(1), betas(2));
+    make_plot(model_output);
 
     %% Curve fitting (global to fine tune the previous fit)
     fit_data = plasticiser_data;
