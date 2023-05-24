@@ -1,0 +1,3 @@
+# exclude raw images due to file size limits
+*.tif
+!*.mask.final.tif
