@@ -40,32 +40,129 @@ end
 
 %% Curve fit the DEHP data to an exponential
 
+p = "DEHP";
+
+after_rinsing_mean = data.Properties.UserData.after_rinsing_wtpc.(p);
+after_rinsing_std = data.Properties.UserData.after_rinsing_std.(p);
+    
+this_data = data(data.Plasticiser == p, :);
+times = this_data.Time;
+
+associated = this_data.MeanPlasticiserWtPercent(this_data.Time >= steady_state.(p));
+associated = mean(associated);
+
+% fit the model
+DEHP_mdl = @(x,xdata) (after_rinsing_mean-associated) * exp(-xdata / x(1)) + associated;
+DEHP_tau = lsqcurvefit(DEHP_mdl, 1, hours(this_data.Time), this_data.MeanPlasticiserWtPercent);
+fprintf("** %s time constant = %g seconds\n", p, DEHP_tau*60*60); % convert from hours
+
+%% Curve fit the BPS data to the model 
+
+p = "BPA";
+load(fullfile("Microscope Images", "size_contribution_"+p+".mat"));
+
+% exclude zeros
+radii = radii(weighting > 0);
+weighting = weighting(weighting > 0);
+
+% Select the data to use for fitting
+fit_data = data(data.Plasticiser == p, :);
+fit_data.Properties.UserData.radii = radii;
+fit_data.Properties.UserData.weighting = weighting;
+
+% Set optimisation options
+options = optimoptions('particleswarm', 'Display', 'iter', 'SwarmSize', 40, 'UseParallel', true, 'FunctionTolerance', 1e-2);
+lb = [1 1 0.1];
+ub = [50e3 1e6 1e2];
+params1 = particleswarm(@(x)evaluate_model(fit_data, p, x(1), x(2), x(3)), numel(lb), lb, ub, options);
+
+% Run the final model
+[~,BPA_model_output] = evaluate_model(fit_data, p, params1(1), params1(2), params1(3));
+
+% Print the curve fit results 
+fprintf("** Curve fit results for %s\n", p);
+fprintf("  Diffusion coefficient at 25.5C: %.4g cm^2/s\n", params1(1) * (10^-4)^2 / 86400); % convert from um^2/days 
+fprintf("  Diffusion coefficient activation energy: %g kJ/mol\n", params1(2) / 1000); % convert from J/mol
+fprintf("  Boundary layer coefficient delta* = %g mm\n", params1(3) * 1e-6 * 1e3); % convert from um to mm
+
+%% Save 
+save(fullfile("Figures", "curve_fit.mat"), "BPA_model_output", "params1", "DEHP_tau", "DEHP_mdl");
+
+%% Load
+load(fullfile("Figures", "curve_fit.mat"));
+
+%% Figure 1
+
+with_inset = true;
+
+figh = figure('Position', [300 300    463   723]);
+tiledlayout(2,1);
+
+% (a) DEHP plot 
+ax1 = nexttile();
+p = "DEHP";
+after_rinsing_mean = data.Properties.UserData.after_rinsing_wtpc.(p);
+after_rinsing_std = data.Properties.UserData.after_rinsing_std.(p);
+for t = unique(data.Temperature_degC)'
+    this_data = data(data.Plasticiser == p & data.Temperature_degC == t, :);
+
+    time = [0; days(this_data.Time)];
+    conc = [after_rinsing_mean; this_data.MeanPlasticiserWtPercent];
+    std = [after_rinsing_std; this_data.StdPlasticiserWtPercent];
+    errorbar(time, conc, std, "o--", "DisplayName", sprintf("%g °C", t));
+    hold on;
+end
+time = linspace(0, max(this_data.Time), 50000);
+plot(days(time), DEHP_mdl(DEHP_tau, hours(time)), "k-", "LineWidth", 1.3, "DisplayName", "Model fit");
+title("(a) " + p);
+xlabel("Leaching time (days)");
+ylabel("Concentration of plasticiser (wt%)");
+xlim([0 7]);
+ylim tight;
+legend("show", "Location", "NorthEast");
+ax1.TickDir = "out";
+
+% (b) BPA plot
+p = "BPA";
+ax2 = nexttile();
 colours = [
     0.00,0.45,0.74;
     0.93,0.69,0.13;
     0.85,0.33,0.10
 ];
 
-for p = ["DEHP"]
-    after_rinsing_mean = data.Properties.UserData.after_rinsing_wtpc.(p);
-    after_rinsing_std = data.Properties.UserData.after_rinsing_std.(p);
-    
-    this_data = data(data.Plasticiser == p, :);
-    times = this_data.Time;
-    
-    associated = this_data.MeanPlasticiserWtPercent(this_data.Time >= steady_state.(p));
-    associated = mean(associated);
-    
-    % fit the model 
-    mdl = @(x,xdata) (after_rinsing_mean-associated) * exp(-xdata / x(1)) + associated;
-    x = lsqcurvefit(mdl, 1, hours(this_data.Time), this_data.MeanPlasticiserWtPercent);
-    fprintf("** %s time constant = %g seconds\n", p, x*60*60); % convert from hours
+% Make the plot
+colour_id = 1;
+for t = unique(data.Temperature_degC)'
+    this_data = data(data.Plasticiser == p & data.Temperature_degC == t, :);
 
-    % plot (minutes)
-    figh = figure('Position', [300 300 453 344]);
+    % plot the data 
+    time = [0; days(this_data.Time)];
+    conc = [this_data.Properties.UserData.after_rinsing_wtpc.(p); this_data.MeanPlasticiserWtPercent];
+    std = [this_data.Properties.UserData.after_rinsing_std.(p); this_data.StdPlasticiserWtPercent];
+    errorbar(time, conc, std, "o--", "Color", colours(colour_id, :), "DisplayName", sprintf("%g °C", t));
+    hold on;
+        
+    % plot the model 
+    plot(BPA_model_output.time, BPA_model_output.("Temp"+t), "Color", colours(colour_id, :), "LineWidth", 1.3, "DisplayName", "Model fit");
+    colour_id = colour_id + 1;
+end
+xlim([0 max(days(this_data.Time))]);
+ylim([5.5 13.5]);
+legend("show", "Location", "NorthEast");
+title("(b) " + p);
+xlabel("Leaching time (days)");
+ylabel("Concentration of plasticiser (wt%)");
+ax2.TickDir = "out";
+
+
+% Make the inset
+if with_inset 
+    p = "DEHP";
+    ax = axes('Position', [ 0.2947    0.7965    0.2303    0.1209]);
     for t = unique(data.Temperature_degC)'
         this_data = data(data.Plasticiser == p & data.Temperature_degC == t, :);
-
+    
         time = [0; minutes(this_data.Time)];
         conc = [after_rinsing_mean; this_data.MeanPlasticiserWtPercent];
         std = [after_rinsing_std; this_data.StdPlasticiserWtPercent];
@@ -73,116 +170,76 @@ for p = ["DEHP"]
         hold on;
     end
     time = linspace(0, max(this_data.Time), 50000);
-    plot(minutes(time), mdl(x, hours(time)), "k-", "DisplayName", "Model fit");
+    plot(minutes(time), DEHP_mdl(DEHP_tau, hours(time)), "k-", "LineWidth", 1.3, "DisplayName", "Model fit");
+    xlabel("Time (mins)");
+    ylabel("Conc (wt%)");
+    xlim([0 15]);
+    ylim tight;
+end
 
-    legend("show", "Location", "SouthEast");
-    ylim([8.5 17]);
-    xlim([0 60])
-    title(p);
-    xlabel("Leaching time (minutes)");
-    ylabel("Concentration of plasticiser (wt%)");
-
-    % also make a zoomed in version
-    ax = axes('Position', [0.2589 0.6541 0.6250 0.2151]);
-    for t = unique(data.Temperature_degC)'
-        this_data = data(data.Plasticiser == p & data.Temperature_degC == t, :);
-
-        time = [0; days(this_data.Time)];
-        conc = [after_rinsing_mean; this_data.MeanPlasticiserWtPercent];
-        std = [after_rinsing_std; this_data.StdPlasticiserWtPercent];
-        errorbar(time, conc, std, "o--", "DisplayName", sprintf("%g °C", t));
-        hold on;
-    end
-    time = linspace(0, max(this_data.Time), 50000);
-    plot(days(time), mdl(x, hours(time)), "k-", "DisplayName", "Model fit");
-    xlabel("Leaching time (days)");
-    ylabel("Concentration (wt%)");
-    exportgraphics(figh, fullfile("Figures", "Model fit " + p + ".pdf"));
-    exportgraphics(figh, fullfile("Figures", "Model fit " + p + ".png"), "Resolution", 600);
+if with_inset
+    exportgraphics(figh, fullfile("Figures", "Figure 1 with inset.png"), "Resolution", 600);
+else
+    exportgraphics(figh, fullfile("Figures", "Figure 1.png"), "Resolution", 600);
 end
 
 
-%% Fit BPA to the diffusion model 
+%% DEHP 0-60 mins
 
-colours = [
-    0.00,0.45,0.74;
-    0.93,0.69,0.13;
-    0.85,0.33,0.10
-];
+figure();
+p = "DEHP";
+after_rinsing_mean = data.Properties.UserData.after_rinsing_wtpc.(p);
+after_rinsing_std = data.Properties.UserData.after_rinsing_std.(p);
+for t = unique(data.Temperature_degC)'
+    this_data = data(data.Plasticiser == p & data.Temperature_degC == t, :);
 
-for plasticiser = ["BPA"]
-    load(fullfile("Microscope Images", "size_contribution_"+plasticiser+".mat"));
+    time = [0; minutes(this_data.Time)];
+    conc = [after_rinsing_mean; this_data.MeanPlasticiserWtPercent];
+    std = [after_rinsing_std; this_data.StdPlasticiserWtPercent];
+    errorbar(time, conc, std, "o--", "DisplayName", sprintf("%g °C", t));
+    hold on;
+end
+time = linspace(0, max(this_data.Time), 50000);
+plot(minutes(time), DEHP_mdl(DEHP_tau, hours(time)), "k-", "LineWidth", 1.3, "DisplayName", "Model fit");
+title("(a) " + p);
+xlabel("Leaching time (days)");
+ylabel("Concentration of plasticiser (wt%)");
+xlim([0 60]);
+ylim tight;
+legend("show", "Location", "NorthEast");
+ax1.TickDir = "out";
 
-    % exclude zeros
-    radii = radii(weighting > 0);
-    weighting = weighting(weighting > 0);
+%% Figure 2
+
+p = "BPA";
+load(fullfile("Microscope Images", "size_contribution_"+p+".mat"));
+
+% exclude zeros
+radii = radii(weighting > 0);
+weighting = weighting(weighting > 0);
+
+for temp = [26 43 60]
     
-    % Select the data to use for fitting
-    fit_data = data(data.Plasticiser == plasticiser, :);
-    fit_data.Properties.UserData.radii = radii;
-    fit_data.Properties.UserData.weighting = weighting;
-
-    % Set optimisation options
-    options = optimoptions('particleswarm', 'Display', 'iter', 'SwarmSize', 40, 'UseParallel', true, 'FunctionTolerance', 1e-2);
-    lb = [1 1 0.1];
-    ub = [50e3 1e6 1e2];
-    params1 = particleswarm(@(p)evaluate_model(fit_data, plasticiser, p(1), p(2), p(3)), numel(lb), lb, ub, options);
-
-    % Run the final model
-    [~,model_output] = evaluate_model(fit_data, plasticiser, params1(1), params1(2), params1(3));
-
-    % Make the plot
-    figh = figure('Position', [300 300 453 344]);
-    colour_id = 1;
-    for t = unique(data.Temperature_degC)'
-        this_data = data(data.Plasticiser == plasticiser & data.Temperature_degC == t, :);
-
-        % plot the data 
-        time = [0; days(this_data.Time)];
-        conc = [this_data.Properties.UserData.after_rinsing_wtpc.(plasticiser); this_data.MeanPlasticiserWtPercent];
-        std = [this_data.Properties.UserData.after_rinsing_std.(plasticiser); this_data.StdPlasticiserWtPercent];
-        errorbar(time, conc, std, "o--", "Color", colours(colour_id, :), "DisplayName", sprintf("%g °C", t));
-        hold on;
-            
-        % plot the model 
-        plot(model_output.time, model_output.("Temp"+t), "Color", colours(colour_id, :), "DisplayName", "Model fit");
-        colour_id = colour_id + 1;
-    end
-    xlim tight;
-    legend("show", "Location", "Best");
-    title(plasticiser);
-    xlabel("Leaching time (days)");
-    ylabel("Concentration of plasticiser (wt%)");
-    exportgraphics(figh, fullfile("Figures", "Model fit " + plasticiser + ".pdf"));
-    exportgraphics(figh, fullfile("Figures", "Model fit " + plasticiser + ".png"), "Resolution", 600);
-
     % Plot the leaching of each size
-    figh = figure('Position', [1000 899 691 439]);
-    to_plot = model_output.Temp26_raw;
+    figh = figure('Position', [1000 899 705 428]);
     layout = tiledlayout(3,5);
     
     for i = 1:size(to_plot, 1)
         nexttile();
-        h = plot(model_output.time, 1000*to_plot(i, :));
+    
+        h = plot(BPA_model_output.time, 1000*BPA_model_output.("Temp"+num2str(temp)+"_raw")(i, :), "LineWidth", 1.3);
+        
         title(sprintf("r = %.0f um", radii(i)));
         ax = ancestor(h, 'axes');
         ax.YAxis.Exponent = 0;
-%         ytickformat('%.0f');
+        ax.XTick = 0:20:60;
+    %         ytickformat('%.0f');
     end
     xlabel(layout, "Leaching time (days)");
     ylabel(layout, "Free plasticiser (mg plasticiser / g plastic)");
-%     linkaxes(layout.Children, 'xy');
-    sgtitle(plasticiser + " at 26 °C");
-    exportgraphics(figh, fullfile("Figures", "Size resolved leaching " + plasticiser + ".pdf"));
-    exportgraphics(figh, fullfile("Figures", "Size resolved leaching " + plasticiser + ".png"), "Resolution", 600);
-
-    % Print the curve fit results 
-    fprintf("** Curve fit results for %s\n", plasticiser);
-    fprintf("  Diffusion coefficient at 25.5C: %.4g cm^2/s\n", params1(1) * (10^-4)^2 / 86400); % convert from um^2/days 
-    fprintf("  Diffusion coefficient activation energy: %g kJ/mol\n", params1(2) / 1000); % convert from J/mol
-    fprintf("  Boundary layer coefficient delta* = %g mm\n", params1(3) * 1e-6 * 1e3); % convert from um to mm
-
-
+    %     linkaxes(layout.Children, 'xy');
+    sgtitle(p + " at " + num2str(temp) + " °C");
+    exportgraphics(figh, fullfile("Figures", sprintf("Figure 2 T=%g C.png", temp)), "Resolution", 600);
 end
 
 
@@ -195,7 +252,7 @@ function [loss, model_output] = evaluate_model(data, plasticiser, D_plastic_25C,
     % save the model_output struct if requested
     if nargout >= 2
         model_output = struct();
-        model_output.time = linspace(0, 21, 1000);
+        model_output.time = linspace(0, 60, 1000);
         model_output.plasticiser = plasticiser;
         model_output.data = data;
     end
